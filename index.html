@@ -152,6 +152,24 @@ body{background:#fff2bb}
  .toolbar{gap:9px}
  .dot-clear-toolbar{width:114px;height:66px}
 }
+
+/* November 2026: compact desktop platter and inset phone stage.
+   Keep the stage's 3:4 mobile aspect and its original touch coordinate system. */
+@media (min-width: 701px) {
+  .canvas-area {
+    width:min(560px, 72vw, 76svh);
+    height:min(560px, 72vw, 76svh);
+    min-height:0;
+  }
+  .lace-doily { width:min(540px, 75vw, 78svh); }
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .canvas-area {
+    width:min(calc(100vw - 40px), calc((100svh - 144px) * .75));
+    max-height:calc(100svh - 144px);
+  }
+  .lace-doily { width:106%; height:auto; aspect-ratio:1 / 1; }
+}
 </style>
 </head><body>
 <div class="app">
@@ -206,7 +224,7 @@ for(const photo of [donutRef,popRef])photo.addEventListener('load',()=>{if(typeo
 let W=0,H=0,DPR=1,crunchCount=0,fractured=false,clusters=[],animStart=0,raf=0,soundOn=true,audio=null,collapseStart=0,collapsePieces=[],collapseBase=null,collapseDone=false,impactStart=0,impactHit={x:0,y:0},bursts=[],dents=[],links=[],overallGrowth=1;
 const PI=Math.PI, TAU=PI*2,rand=(a,b)=>a+Math.random()*(b-a),clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const g=()=>({x:W*.5,y:H*.475,r:Math.min(W*.305,H*.345,184)});
-function resize(){let r=canvas.getBoundingClientRect();W=r.width;H=r.height;const platter=document.getElementById("displayPlatter"),size=Math.min(Math.min(W*.305,H*.345,184)*2.84,W*.865,H*.836);platter.style.width=size+"px";platter.style.height=size+"px";DPR=Math.min(2,window.devicePixelRatio||1);for(const c of [canvas,shell,displacement,visibleShell,coatingLayer,warpedSurface]){c.width=Math.round(W*DPR);c.height=Math.round(H*DPR)}ctx.setTransform(DPR,0,0,DPR,0,0);sc.setTransform(DPR,0,0,DPR,0,0);dc.setTransform(DPR,0,0,DPR,0,0);vc.setTransform(DPR,0,0,DPR,0,0);coatingCtx.setTransform(DPR,0,0,DPR,0,0);warpedCtx.setTransform(DPR,0,0,DPR,0,0);render(performance.now())}
+function resize(){let r=canvas.getBoundingClientRect();W=r.width;H=r.height;const platter=document.getElementById("displayPlatter"),size=Math.min(Math.min(W*.305,H*.345,184)*2.84,W*.865,H*.836);platter.style.width=size+"px";platter.style.height=size+"px";DPR=Math.min(window.matchMedia("(max-width:700px)").matches?1.3:1.6,window.devicePixelRatio||1);for(const c of [canvas,shell,displacement,visibleShell,coatingLayer,warpedSurface]){c.width=Math.round(W*DPR);c.height=Math.round(H*DPR)}ctx.setTransform(DPR,0,0,DPR,0,0);sc.setTransform(DPR,0,0,DPR,0,0);dc.setTransform(DPR,0,0,DPR,0,0);vc.setTransform(DPR,0,0,DPR,0,0);coatingCtx.setTransform(DPR,0,0,DPR,0,0);warpedCtx.setTransform(DPR,0,0,DPR,0,0);render(performance.now())}
 function ellipse(c,x,y,rx,ry){c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU)}
 function bakedBiscuit(o){let {x,y,r}=o;ctx.save();
  // Only the lower exposed biscuit edge is visible. Mask the back/left wedge
@@ -1663,7 +1681,15 @@ function render(now){
  // Clay stretches through contour displacement, not bright crescent ribbons.
  // No synthetic flying shards: only fallenShellPieces (actual detached cells).
 }
-function loop(now){render(now);raf=requestAnimationFrame(loop)}
+// Cap canvas redraws, particularly on high-density mobile screens.
+// Pointer handlers retain native frequency; only the expensive rendering is throttled.
+let lastCanvasFrame=0;
+function loop(now){
+ if(document.hidden){raf=requestAnimationFrame(loop);return;}
+ const minFrame=window.matchMedia("(max-width:700px)").matches?1000/30:1000/45;
+ if(now-lastCanvasFrame>=minFrame){lastCanvasFrame=now;render(now)}
+ raf=requestAnimationFrame(loop);
+}
 // Pressing a previously fractured large plate divides THAT plate further.
 // We keep the original fracture footprint and all neighboring cells instead of
 // generating a second overlapping group or redirecting the click elsewhere.
